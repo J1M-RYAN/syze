@@ -16,6 +16,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: syze-macos
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary_name: syze-macos-aarch64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -49,6 +52,10 @@ jobs:
         with:
           name: syze-macos
           path: release/
+      - uses: actions/download-artifact@v2
+        with:
+          name: syze-macos-aarch64
+          path: release/
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -74,8 +81,8 @@ jobs:
           asset_path: release/syze-linux
           asset_name: syze-${{ steps.get_version.outputs.VERSION }}-x86_64-linux
           asset_content_type: application/octet-stream
-      - name: Upload macOS Release Asset
-        id: upload-macos-release-asset
+      - name: Upload macOS x86 Release Asset
+        id: upload-macos-x86-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -83,4 +90,14 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: release/syze-macos
           asset_name: syze-${{ steps.get_version.outputs.VERSION }}-x86_64-macos
+          asset_content_type: application/octet-stream
+      - name: Upload macOS ARM Release Asset
+        id: upload-macos-arm-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/syze-macos-aarch64
+          asset_name: syze-${{ steps.get_version.outputs.VERSION }}-aarch64-macos
           asset_content_type: application/octet-stream
