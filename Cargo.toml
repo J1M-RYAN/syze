@@ -1,5 +1,6 @@
 [package]
 name = "syze"
+description = "clie to view the size of files and folders in the current directory"
 version = "0.1.0"
 edition = "2021"
 
