@@ -1,6 +1,5 @@
 use clap::Command;
 use std::{
-    fmt::format,
     fs::{read_dir, DirEntry},
     io,
     path::Path,
