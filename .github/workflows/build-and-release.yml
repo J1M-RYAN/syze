@@ -16,9 +16,11 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: syze-macos
+            should_sign: true
           - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: syze-macos-aarch64
+            should_sign: true
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -34,6 +36,17 @@ jobs:
           args: --release --target ${{ matrix.target }}
       - name: Rename binary
         run: mv target/${{ matrix.target }}/release/syze target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+      - name: Sign MacOS binary
+        if: matrix.should_sign
+        run: |
+          echo "${{ secrets.MACOS_CERTIFICATE }}" | base64 --decode > certificate.pem
+          echo "${{ secrets.MACOS_PRIVATE_KEY }}" | base64 --decode > key.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security import certificate.pem -k build.keychain -T /usr/bin/codesign
+          security import key.p12 -k build.keychain -P ${{ secrets.MACOS_PRIVATE_KEY_PASSWORD }} -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+          codesign --keychain build.keychain --sign $(security find-identity -v | grep "Self Signed" | awk '{print $2}') target/${{ matrix.target }}/release/${{ matrix.binary_name }}
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.binary_name }}
