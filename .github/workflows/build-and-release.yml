@@ -42,10 +42,13 @@ jobs:
           openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout key.pem -out certificate.pem -subj "/C=US/ST=SomeState/L=SomeCity/O=SomeOrganization/OU=SomeOrganizationalUnit/CN=somecommonname"
           security create-keychain -p actions build.keychain
           security default-keychain -s build.keychain
-          security import certificate.pem -k build.keychain -T /usr/bin/codesign
-          security import key.pem -k build.keychain -P "" -T /usr/bin/codesign
+          security unlock-keychain -p actions build.keychain
+          security import certificate.pem -k build.keychain -T /usr/bin/codesign -P ""
+          security import key.pem -k build.keychain -P "" -T /usr/bin/codesign -A
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
-          codesign --keychain build.keychain --sign $(security find-identity -v | grep "Self Signed" | awk '{print $2}') target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+          CERT_ID=$(security find-identity -v | grep "Self Signed" | awk '{print $2}')
+          echo $CERT_ID
+          codesign --keychain build.keychain --sign $CERT_ID target/${{ matrix.target }}/release/${{ matrix.binary_name }}
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.binary_name }}
