@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
         include:
@@ -15,6 +15,11 @@ jobs:
             runs-on: ubuntu-latest
           - target: aarch64-apple-darwin
             runs-on: macos-latest
+            os:
+              name: openbsd
+              architecture: arm64
+              version: "7.3"
+              host: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -23,10 +28,17 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Cross Platform Build
+        uses: cross-platform-actions/action@v0.13.0
         with:
-          command: build
-          args: --release --target ${{ matrix.target }}
+          operating_system: ${{ matrix.os.name }}
+          architecture: ${{ matrix.os.architecture }}
+          version: ${{ matrix.os.version }}
+          shell: bash
+          memory: 5G
+          cpu_count: 4
+          run: |
+            cargo build --release --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.target }}
@@ -76,5 +88,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: release/macos/syze
-          asset_name: syze-${{ steps.get_version.outputs.VERSION }}-aarch64-macos
+          asset_name: syze-${{ steps.get_version.outputs.VERSION }}-aarch64-apple-darwin
           asset_content_type: application/octet-stream
