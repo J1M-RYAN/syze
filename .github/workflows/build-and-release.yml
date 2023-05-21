@@ -36,6 +36,11 @@ jobs:
           args: --release --target ${{ matrix.target }}
       - name: Rename binary
         run: mv target/${{ matrix.target }}/release/syze target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.binary_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
   release:
     needs: build
     runs-on: ubuntu-latest
