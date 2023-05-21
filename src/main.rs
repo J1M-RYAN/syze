@@ -1,4 +1,4 @@
-use clap::Command;
+use clap::{Arg, Command};
 use std::{
     fs::{read_dir, DirEntry},
     io,
@@ -13,6 +13,12 @@ struct AppInfo {
     author: &'static str,
 }
 
+struct Argument {
+    id: &'static str,
+    required: bool,
+    index: usize,
+}
+
 fn main() {
     let app_info = AppInfo {
         name: "syze",
@@ -20,14 +26,55 @@ fn main() {
         about: "view the size of files",
         author: "Jim Ryan",
     };
-    let _matches = Command::new(app_info.name)
+
+    let file_or_folder_argument = Argument {
+        id: "file_or_folder",
+        required: false,
+        index: 1,
+    };
+
+    let matches = Command::new(app_info.name)
         .version(app_info.version)
         .about(app_info.about)
         .author(app_info.author)
+        .arg(
+            Arg::new(file_or_folder_argument.id)
+                .required(file_or_folder_argument.required)
+                .index(file_or_folder_argument.index),
+        )
         .get_matches();
 
-    print_info_from_folder("./", 0);
-    let total_size = get_dir_size(Path::new("./")).unwrap();
+    let folder_if_none = "./".to_string();
+
+    let file_or_folder = matches
+        .get_one::<String>(file_or_folder_argument.id)
+        .unwrap_or(&folder_if_none);
+
+    let is_folder = Path::new(file_or_folder).is_dir();
+
+    match is_folder {
+        true => {
+            print_info_from_folder(&file_or_folder, 0);
+            print_total_size(&file_or_folder);
+        }
+        false => {
+            print_file_size(&file_or_folder);
+        }
+    }
+}
+
+fn print_file_size(path: &str) {
+    let file_name = Path::new(path).file_name().unwrap().to_string_lossy();
+    let file_size = get_dir_size(Path::new(path)).unwrap();
+    println!(
+        "{}: {}",
+        file_name.blue().bold(),
+        display_size(file_size).cyan().bold()
+    );
+}
+
+fn print_total_size(path: &str) {
+    let total_size = get_dir_size(Path::new(path)).unwrap();
     println!(
         "{} {}",
         "Total size:".blue().bold(),
