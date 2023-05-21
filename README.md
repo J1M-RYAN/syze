@@ -25,6 +25,15 @@ cargo install --path .
 syze
 ```
 
+```bash
+syze /path/to/folder/
+```
+
+```bash
+syze /path/to/file/
+```
+
+
 ## Info
 
 syze does not display hidden files and folders
