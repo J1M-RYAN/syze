@@ -7,11 +7,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        target:
-          - x86_64-unknown-linux-musl
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            binary_name: syze-linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary_name: syze-macos
+            should_sign: true
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary_name: syze-macos-aarch64
+            should_sign: true
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -24,11 +34,13 @@ jobs:
         with:
           command: build
           args: --release --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v2
+      - name: Rename binary
+        run: mv target/${{ matrix.target }}/release/syze target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/
-
+          name: ${{ matrix.binary_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary_name }}
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -36,7 +48,15 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:
-          name: x86_64-unknown-linux-musl
+          name: syze-linux
+          path: release/
+      - uses: actions/download-artifact@v2
+        with:
+          name: syze-macos
+          path: release/
+      - uses: actions/download-artifact@v2
+        with:
+          name: syze-macos-aarch64
           path: release/
       - name: Create Release
         id: create_release
@@ -53,13 +73,33 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
-      - name: Upload Release Asset
-        id: upload-release-asset
+      - name: Upload Linux Release Asset
+        id: upload-linux-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/syze
+          asset_path: release/syze-linux
           asset_name: syze-${{ steps.get_version.outputs.VERSION }}-x86_64-linux
+          asset_content_type: application/octet-stream
+      - name: Upload macOS x86 Release Asset
+        id: upload-macos-x86-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/syze-macos
+          asset_name: syze-${{ steps.get_version.outputs.VERSION }}-x86_64-macos
+          asset_content_type: application/octet-stream
+      - name: Upload macOS ARM Release Asset
+        id: upload-macos-arm-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/syze-macos-aarch64
+          asset_name: syze-${{ steps.get_version.outputs.VERSION }}-aarch64-macos
           asset_content_type: application/octet-stream
